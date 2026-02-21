@@ -31,3 +31,11 @@ if __name__ == "__main__":
             time.sleep(25200) # 約7時間のランダム休止
             
         time.sleep(wait_time)
+if __name__ == "__main__":
+    # 実戦ロジックを別スレッドで開始
+    from threading import Thread
+    Thread(target=high_density_mission).start() # 以前提示した高密度モード関数
+    
+    # Renderの要求するポートを開放する
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port)
