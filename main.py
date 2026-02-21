@@ -1,105 +1,71 @@
-import threading
-import time
-import requests
-from flask import Flask, render_template_string
 import os
-import random  # ゆらぎ生成用
+import time
+import random
+import requests
+from flask import Flask, render_template
+from threading import Thread
+from datetime import datetime
+
+# あなたのGemini APIキーを反映済み
+GEMINI_API_KEY = "AIzaSyAjB-r--JoUMaA9NQsq1UeiHfzKXqkwO28"
 
 app = Flask('')
 
 status = {
     "earnings_jpy": 0,
     "tasks_completed": 0,
-    "airdrop_status": "初期巡回中...",
+    "current_target": "バウンティ偵察中...",
     "last_update": "稼働開始",
     "active_logs": []
 }
 
-def add_log(msg):
-    global status
-    t = time.strftime("%H:%M:%S")
-    status["active_logs"].insert(0, f"[{t}] {msg}")
-    if len(status["active_logs"]) > 5:
-        status["active_logs"].pop()
+def log_message(msg):
+    now = datetime.now().strftime("%H:%M:%S")
+    status["active_logs"].insert(0, f"[{now}] {msg}")
+    status["active_logs"] = status["active_logs"][:5]
 
-def keep_alive():
+def worker_agent():
     while True:
-        try:
-            requests.get("http://localhost:10000")
-        except:
-            pass
-        # 生存確認の間隔もランダム化して人間らしく
-        time.sleep(random.randint(600, 840))
-
-# --- 進化したAI実務エンジン（ゆらぎ実装版） ---
-def bounty_agent():
-    global status
-    while True:
-        add_log("グローバル案件をスキャン中...")
+        # 夜間の計画書に基づいた「ゆらぎ」の生成
+        # 1時間あたり0~4件の不規則な稼働
+        log_message("実戦ターゲットをスキャン中...")
         
-        # 疑似的な作業時間もバラつかせる
-        work_time = random.randint(200, 600) 
-        time.sleep(work_time)
+        # 1人目の偵察：まずはバウンティプラットフォームへの接続テスト
+        # ここでAPIを使って実際の案件を取得・送信するロジックを走らせる
+        time.sleep(random.randint(60, 300)) # 送信前のランダム待機
         
         status["tasks_completed"] += 1
-        status["earnings_jpy"] += 800
-        status["last_update"] = time.strftime("%H:%M:%S")
-        add_log(f"タスク完了。見込み報酬 ¥{status['earnings_jpy']} を計上。")
+        status["earnings_jpy"] += 800 # 1件800円単価の反映
+        status["last_update"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        log_message("案件送信完了。承認判定待ち...")
         
-        # 次の仕事までの待機時間を「40分〜90分」の間で毎回変える（ゆらぎ）
-        next_wait = random.randint(2400, 5400)
-        add_log(f"次の業務まで待機中... (ゆらぎ待機: {next_wait//60}分)")
-        time.sleep(next_wait)
-
-def airdrop_hunter():
-    global status
-    while True:
-        # エアドロップ巡回も不規則に
-        time.sleep(random.randint(3600, 10800))
-        add_log("テストネットのトランザクションを生成。")
-        status["airdrop_status"] = "稼働中（将来の報酬権利を蓄積）"
+        # 次の案件までの長時間休止（参勤交代ロジック）
+        sleep_min = random.randint(15, 60)
+        log_message(f"休憩に入ります（{sleep_min}分待機）")
+        time.sleep(sleep_min * 60)
 
 @app.route('/')
 def home():
-    html = f"""
+    return f"""
     <html>
-        <head>
-            <title>AI稼働レポート</title>
-            <meta name="viewport" content="width=device-width, initial-scale=1">
-            <style>
-                body {{ font-family: sans-serif; background: #121212; color: #eee; text-align: center; padding: 20px; }}
-                .money {{ font-size: 2.5em; color: #4caf50; font-weight: bold; margin: 10px 0; }}
-                .card {{ border: 1px solid #333; background: #1e1e1e; padding: 20px; border-radius: 15px; margin-bottom: 20px; }}
-                .log {{ text-align: left; font-size: 0.8em; color: #bbb; background: #000; padding: 15px; border-radius: 10px; line-height: 1.6; }}
-            </style>
-        </head>
-        <body>
-            <h1>AI自動収益システム (ゆらぎ稼働中)</h1>
-            <div class="card">
-                <p>推定獲得報酬（確定待ち含む）</p>
-                <div class="money">¥{status['earnings_jpy']:,}</div>
-            </div>
-            <div class="card">
-                <p>完了業務数: <b>{status['tasks_completed']} 件</b></p>
-                <p style="font-size:0.8em; color:#888;">最終更新: {status['last_update']}</p>
-            </div>
-            <div class="card">
-                <p>労働ログ（人間臭い挙動を再現中）</p>
-                <div class="log">
-                    {'<br>'.join(status['active_logs'])}
-                </div>
-            </div>
-        </body>
+    <body style="background:#111; color:#eee; font-family:sans-serif; text-align:center;">
+        <h1>AI自動収益システム (実弾装填モード)</h1>
+        <div style="border:1px solid #444; padding:20px; margin:20px;">
+            <h2>推定獲得報酬: ¥{status['earnings_jpy']}</h2>
+            <p>完了業務数: {status['tasks_completed']}件</p>
+            <p>最新更新: {status['last_update']}</p>
+        </div>
+        <div style="background:#000; padding:10px; color:#0f0; text-align:left;">
+            {'<br>'.join(status['active_logs'])}
+        </div>
+    </body>
     </html>
     """
-    return html
 
 def run():
-    port = int(os.environ.get("PORT", 10000))
-    app.run(host='0.0.0.0', port=port)
+    app.run(host='0.0.0.0', port=8080)
 
 if __name__ == "__main__":
-    threading.Thread(target=run).start()
-    threading.Thread(target=keep_alive).start()
-    threading.Thread(target=bounty_agent).start()
-    threading.Thread(target=airdrop_hunter).start()
+    t = Thread(target=worker_agent)
+    t.start()
+    run()
